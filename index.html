@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>לוח המשפחה</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&family=Secular+One&display=swap" rel="stylesheet">
+<style>
+html{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+
+/* Layout: one narrow mobile column. Big "today" card on top, then alerts, week strip (tap for month), child tabs with per-child panels, change log last. */
+:root{
+  --bg:#F5F3FB; --surface:#FFFFFF; --ink:#1D1A2B; --muted:#6B6784; --line:#E3DFF0; --soft:#EEEBF7;
+  --mom:#7A4FD3; --mom-t:#ECE4FF; --on-mom:#FFFFFF;
+  --dad:#1F6BD8; --dad-t:#DFEBFF; --on-dad:#FFFFFF;
+  --alert:#C9302C; --alert-t:#FDE6E6; --warn:#8A5B00; --warn-t:#FFF1CC; --ok:#17814F; --ok-t:#DDF5E8;
+  --f-display:"Secular One","Rubik",system-ui,sans-serif; --f-body:"Rubik",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#14121C; --surface:#1E1B2B; --ink:#F2EFFA; --muted:#A6A1BD; --line:#332F45; --soft:#2A2738;
+  --mom:#B496FF; --mom-t:#2D2250; --on-mom:#1A1030; --dad:#7FB0FF; --dad-t:#1B2D4F; --on-dad:#0B1C3A;
+  --alert:#FF8A86; --alert-t:#3B1F24; --warn:#F2C66B; --warn-t:#3A2F10; --ok:#5BD59B; --ok-t:#17352A; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#14121C; --surface:#1E1B2B; --ink:#F2EFFA; --muted:#A6A1BD; --line:#332F45; --soft:#2A2738;
+  --mom:#B496FF; --mom-t:#2D2250; --on-mom:#1A1030; --dad:#7FB0FF; --dad-t:#1B2D4F; --on-dad:#0B1C3A;
+  --alert:#FF8A86; --alert-t:#3B1F24; --warn:#F2C66B; --warn-t:#3A2F10; --ok:#5BD59B; --ok-t:#17352A; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.45;direction:rtl}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--dad);outline-offset:2px}
+.wrap{max-width:640px;margin:0 auto;padding-block:14px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:16px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.top h1{font-family:var(--f-display);font-weight:400;font-size:1.5rem;margin:0;text-wrap:balance}
+.btn{border:0;border-radius:12px;padding:10px 16px;font-weight:600;background:var(--soft);min-height:44px}
+.btn.pri{background:var(--ink);color:var(--bg)}
+.btn.mom{background:var(--mom);color:var(--on-mom)} .btn.dad{background:var(--dad);color:var(--on-dad)}
+.btn.sm{min-height:36px;padding:6px 12px;font-size:.9rem}
+.btn.danger{background:var(--alert-t);color:var(--alert)}
+.btn.ok{background:var(--ok-t);color:var(--ok)}
+.editchip{display:flex;align-items:center;gap:8px;background:var(--warn-t);color:var(--warn);border-radius:999px;padding:6px 6px 6px 14px;font-weight:600;font-size:.9rem}
+.editchip button{border:0;background:var(--surface);border-radius:999px;padding:6px 12px;font-weight:600;color:var(--ink)}
+.banner{background:var(--warn-t);color:var(--warn);border-radius:12px;padding:10px 14px;font-size:.92rem}
+
+/* today */
+.today{border:0;width:100%;text-align:right;border-radius:24px;padding:22px 22px 18px;display:flex;flex-direction:column;gap:6px;background:var(--soft);color:var(--ink)}
+.today.mom{background:var(--mom);color:var(--on-mom)} .today.dad{background:var(--dad);color:var(--on-dad)}
+.today .lbl{font-size:1.05rem;font-weight:500;opacity:.92}
+.today .big{font-family:var(--f-display);font-size:clamp(3rem,16vw,4.6rem);line-height:1.05}
+.today .date{font-weight:500;opacity:.92}
+.today .tomorrow{margin-top:10px;padding-top:10px;border-top:1px solid currentColor;border-top-color:color-mix(in srgb,currentColor 30%,transparent);display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-weight:600}
+.tag{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:2px 10px;font-size:.82rem;font-weight:600;background:var(--soft);color:var(--ink)}
+.today .tag{background:color-mix(in srgb,currentColor 18%,transparent);color:inherit}
+.tag.red{background:var(--alert-t);color:var(--alert)} .tag.amber{background:var(--warn-t);color:var(--warn)} .tag.green{background:var(--ok-t);color:var(--ok)}
+
+/* alerts */
+.alerts{display:flex;flex-direction:column;gap:8px}
+.alert{border:0;text-align:right;display:flex;gap:10px;align-items:center;border-radius:14px;padding:12px 14px;font-weight:600;background:var(--alert-t);color:var(--alert)}
+.alert.amber{background:var(--warn-t);color:var(--warn)}
+
+/* cards */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.card h2{font-family:var(--f-display);font-weight:400;font-size:1.2rem;margin:0}
+.cardhead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.legend{display:flex;gap:12px;font-size:.88rem;color:var(--muted);font-weight:500}
+.dot{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:-1px;margin-inline-end:4px}
+.dot.mom{background:var(--mom)} .dot.dad{background:var(--dad)}
+
+/* week + month */
+.week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.day{border:0;border-radius:14px;padding:8px 2px 6px;display:flex;flex-direction:column;align-items:center;gap:1px;min-height:84px;background:var(--soft);color:var(--muted);font-weight:600}
+.day.mom{background:var(--mom);color:var(--on-mom)} .day.dad{background:var(--dad);color:var(--on-dad)}
+.day .dn{font-size:.78rem;opacity:.9} .day .num{font-family:var(--f-display);font-size:1.35rem;line-height:1.1}
+.day .mk{font-size:.8rem;min-height:1.1em;line-height:1.1} .day .chg{font-size:.66rem;font-weight:700}
+.day.today-ring,.cell.today-ring{box-shadow:0 0 0 3px var(--bg),0 0 0 5px var(--ink)}
+.monthnav{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.monthnav b{font-family:var(--f-display);font-weight:400;font-size:1.15rem}
+.dows,.mgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+.dows span{text-align:center;font-size:.78rem;color:var(--muted);font-weight:600}
+.cell{border:0;border-radius:10px;min-height:52px;padding:4px 2px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--soft);color:var(--muted);font-weight:600}
+.cell.mom{background:var(--mom);color:var(--on-mom)} .cell.dad{background:var(--dad);color:var(--on-dad)}
+.cell.void{background:transparent;pointer-events:none}
+.cell .n{font-family:var(--f-display);font-size:1.05rem;line-height:1.1} .cell .mk{font-size:.68rem;line-height:1.1;min-height:.9em}
+
+/* kids */
+.tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.tab{border:2px solid var(--line);background:var(--surface);border-radius:16px;padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:0;font-weight:700}
+.tab .em{font-size:1.6rem;line-height:1.2} .tab small{font-weight:500;color:var(--muted);font-size:.78rem}
+.tab[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:var(--bg)} .tab[aria-pressed="true"] small{color:var(--bg);opacity:.8}
+.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.row{display:flex;gap:10px;align-items:flex-start;background:var(--soft);border-radius:14px;padding:10px 12px}
+.row .body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.row .body span{overflow-wrap:anywhere}
+.row small{color:var(--muted)}
+.row .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.row.done .body b{text-decoration:line-through;color:var(--muted)}
+.chk{flex:none;width:36px;height:36px;border-radius:10px;border:2px solid var(--muted);background:var(--surface);font-size:1.2rem;line-height:1;display:grid;place-items:center}
+.chk[aria-pressed="true"]{background:var(--ok);border-color:var(--ok);color:var(--surface)}
+.empty{color:var(--muted);padding:6px 2px}
+.tt{display:grid;grid-template-columns:1fr;gap:8px}
+.ttday{background:var(--soft);border-radius:14px;padding:10px 12px;display:grid;grid-template-columns:4.2rem 1fr auto;gap:8px;align-items:start}
+.ttday b{font-family:var(--f-display);font-weight:400}
+.ttday div>span:not(.gear):not(.empty){white-space:pre-line;display:block}
+.ttday .gear{display:block;color:var(--warn);font-weight:600;font-size:.92rem}
+.ttday.tmr{outline:2px solid var(--warn)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--soft);border-radius:999px;padding:8px 14px;font-weight:500;min-height:40px}
+.chip input{width:18px;height:18px;margin:0;accent-color:var(--ink)}
+.sublbl{font-weight:600;font-size:.92rem}
+.ttday .endt{display:block;font-weight:600;font-size:.92rem;color:var(--ink)}
+.callout{background:var(--warn-t);color:var(--warn);border-radius:14px;padding:10px 14px;font-weight:600}
+.log{font-size:.9rem;color:var(--muted);display:flex;flex-direction:column;gap:6px}
+.log li{background:var(--soft);border-radius:10px;padding:8px 12px}
+
+/* sheet */
+.sheet{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;justify-content:center;background:rgba(10,8,20,.5)}
+.panel{background:var(--surface);width:100%;max-width:640px;max-height:88%;overflow:auto;border-radius:24px 24px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom,0px));padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:14px}
+.panel h3{font-family:var(--f-display);font-weight:400;font-size:1.35rem;margin:0}
+.field{display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:.92rem}
+.field input,.field select,.field textarea{border:1.5px solid var(--line);background:var(--bg);border-radius:12px;padding:10px 12px;min-height:44px;font-weight:400;width:100%}
+.field textarea{min-height:76px;resize:vertical}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap}
+.btnrow .btn{flex:1}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:999px;font-weight:600;z-index:80;max-width:90%;text-align:center}
+@media (max-width:420px){.two{grid-template-columns:1fr}.ttday{grid-template-columns:3.6rem 1fr auto}}
+@media (prefers-reduced-motion:no-preference){.btn,.day,.cell,.tab{transition:transform .08s}.btn:active,.day:active,.cell:active,.tab:active{transform:scale(.97)}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div id="sheet" class="sheet" hidden></div>
+<div id="toast" class="toast" hidden></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+
+document.documentElement.lang="he";document.documentElement.dir="rtl";
+const START="2026-11-08",END="2027-01-08";
+const PAR={mom:{n:"אמא",e:"💜",v:"העבירה"},dad:{n:"אבא",e:"💙",v:"העביר"}};
+const KIDS=[{id:"ofir",n:"אופיר",g:"כיתה ה׳2",e:"🌟"},{id:"ariel",n:"אריאל",g:"כיתה ד׳1",e:"🎀"},{id:"itamar",n:"איתמר",g:"גן",e:"🧸",gan:true}];
+const KIND={school:{e:"🏫",n:"בית ספר / גן"},holiday:{e:"🏖️",n:"חג וחופשה"},medical:{e:"🩺",n:"רפואי"},activity:{e:"⚽",n:"חוג ופעילות"},family:{e:"🎂",n:"יום הולדת / משפחה"}};
+const DAYN=["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"];
+const DAYL=["א׳","ב׳","ג׳","ד׳","ה׳","ו׳","ש׳"];
+const MON=["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pad=n=>String(n).padStart(2,"0");
+const toD=s=>{const[a,b,c]=s.split("-").map(Number);return new Date(Date.UTC(a,b-1,c))};
+const toS=d=>d.getUTCFullYear()+"-"+pad(d.getUTCMonth()+1)+"-"+pad(d.getUTCDate());
+const add=(s,n)=>{const d=toD(s);d.setUTCDate(d.getUTCDate()+n);return toS(d)};
+const diff=(a,b)=>Math.round((toD(a)-toD(b))/864e5);
+const dow=s=>toD(s).getUTCDay();
+const dm=s=>(+s.slice(8))+"/"+(+s.slice(5,7));
+const longD=s=>"יום "+DAYN[dow(s)]+", "+(+s.slice(8))+" ב"+MON[+s.slice(5,7)-1];
+const todayS=()=>{const n=new Date();return n.getFullYear()+"-"+pad(n.getMonth()+1)+"-"+pad(n.getDate())};
+const kidOf=id=>KIDS.find(k=>k.id===id);
+
+/* rotation: Sun-Mon mom, Tue-Wed dad, Thu alternates (dad first), Fri-Sat alternates (mom first) */
+function baseParent(s){
+  if(s<START||s>END)return null;
+  const d=dow(s),w=Math.floor(diff(s,START)/7),even=w%2===0;
+  if(d<=1)return"mom"; if(d<=3)return"dad";
+  if(d===4)return even?"dad":"mom";
+  return even?"mom":"dad";
+}
+
+let db=null;
+const D={overrides:{},changes:[],tests:[],homework:[],timetable:{},events:[],activities:[],config:{}};
+const S={mode:null,kid:"ofir",view:"week",month:null,ro:false,dbOff:false,loaded:0,stale:false,cfgLoaded:false,authErr:""};
+try{S.mode=localStorage.getItem("fam_mode")||null;S.kid=localStorage.getItem("fam_kid")||"ofir"}catch(e){}
+if(!kidOf(S.kid))S.kid="ofir";
+S.month=(todayS()<START?START:todayS()).slice(0,7);
+function save(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+
+function eff(s){
+  const b=baseParent(s),o=D.overrides[s];
+  if(b&&o&&(o.parent==="mom"||o.parent==="dad"))return{p:o.parent,b,o,changed:o.parent!==b};
+  return{p:b,b,o:null,changed:false};
+}
+const evOn=s=>D.events.filter(e=>s>=e.date&&s<=(e.end||e.date));
+const evKids=e=>Array.isArray(e.kids)&&e.kids.length?e.kids:(e.child==="all"||!e.child?KIDS.map(k=>k.id):[e.child]);
+const kidsLbl=e=>{const a=evKids(e);return a.length===KIDS.length?"כולם":a.map(id=>(kidOf(id)||{}).n||"").join(", ")};
+const testsOn=s=>D.tests.filter(t=>t.date===s);
+function marks(s){
+  const ts=testsOn(s).filter(t=>t.status!=="pending"),ev=evOn(s);
+  return (ts.length?"📝":"")+(ev.length?(KIND[ev[0].kind]||KIND.school).e:"");
+}
+const rel=ms=>{const m=Math.round((Date.now()-ms)/6e4);if(m<1)return"הרגע";if(m<60)return"לפני "+m+" דק׳";const h=Math.round(m/60);if(h<24)return"לפני "+h+" שעות";const d=Math.round(h/24);return d===1?"אתמול":"לפני "+d+" ימים"};
+
+/* ---------- render ---------- */
+function render(){
+  const t=todayS();
+  $("#app").innerHTML=[header(),banners(),seedBlock(),todayCard(t),alertsBlock(t),calendarCard(t),kidsBlock(t),logBlock()].join("");
+}
+function header(){
+  const right=S.mode
+    ?`<div class="editchip">✏️ עורכ/ת: ${PAR[S.mode].n}<button data-a="exit">יציאה</button></div>`
+    :(S.ro||S.dbOff?"":`<button class="btn pri" data-a="login">✏️ עריכה</button>`);
+  return `<div class="top"><h1>לוח המשפחה 🏠</h1>${right}</div>`;
+}
+function banners(){
+  let h="";
+  if(S.dbOff)h+=`<div class="banner">${S.authErr?"לא הצלחנו להתחבר ל-Firebase ("+esc(S.authErr)+"). בדקו את הוראות ההקמה.":"הדף עדיין לא מחובר ל-Firebase. חלוקת הימים מוצגת, ומבחנים, שיעורי בית ושינויים יופיעו אחרי ההקמה."}</div>`;
+  else if(S.ro)h+=`<div class="banner">יש לך הרשאת צפייה בלבד. כדי להוסיף או לסמן, בקשו הרשאת "תורם" בשיתוף הדף.</div>`;
+  else if(S.stale)h+=`<div class="banner">לא מצליחים להתחבר לנתונים כרגע. מה שמוצג עשוי להיות לא מעודכן.</div>`;
+  return h;
+}
+function todayCard(t){
+  if(t<START)return"";
+  const e=eff(t),tm=add(t,1),em=eff(tm);
+  let cls="",lbl,big,sub=longD(t);
+  if(t<START){lbl="עוד לא התחלנו";big="מתחילים ב-"+dm(START);sub="ביום ראשון, עם "+PAR[baseParent(START)].n+" "+PAR[baseParent(START)].e}
+  else if(t>END){lbl="התקופה הסתיימה";big="עד הפעם הבאה";}
+  else{cls=e.p;lbl="היום אתם עם";big=PAR[e.p].n+" "+PAR[e.p].e}
+  const chg=e.changed?`<span class="tag">✎ שונה ע״י ${PAR[e.o.by]?PAR[e.o.by].n:"הורה"}</span>`:"";
+  const evs=evOn(t).map(x=>`<span class="tag">${(KIND[x.kind]||KIND.school).e} ${esc(x.title)}</span>`).join("");
+  let tom="";
+  if(tm>=START&&tm<=END)tom=`<div class="tomorrow">מחר: עם ${PAR[em.p].n} ${PAR[em.p].e}${em.changed?' <span class="tag">✎ שונה</span>':""}</div>`;
+  else if(t<START&&t!==add(START,-1))tom=`<div class="tomorrow">עוד ${diff(START,t)} ימים להתחלה</div>`;
+  return `<button class="today ${cls}" data-a="day" data-d="${t}"><span class="lbl">${lbl}</span><span class="big">${big}</span><span class="date">${esc(sub)}</span>${chg||evs?`<span style="display:flex;gap:6px;flex-wrap:wrap">${chg}${evs}</span>`:""}${tom}</button>`;
+}
+function alertsBlock(t){
+  const items=[];
+  D.tests.filter(x=>x.status!=="pending"&&diff(x.date,t)>=0&&diff(x.date,t)<=3).sort((a,b)=>a.date<b.date?-1:1).forEach(x=>{
+    const n=diff(x.date,t),w=n===0?"היום":n===1?"מחר":"בעוד "+n+" ימים";
+    items.push(`<button class="alert" data-a="kid" data-k="${esc(x.child)}">📝 ${w} מבחן ב${esc(x.subject)} · ${esc((kidOf(x.child)||{}).n||"")}</button>`);
+  });
+  D.homework.filter(x=>!x.done&&diff(x.due,t)>=0&&diff(x.due,t)<=1).forEach(x=>{
+    items.push(`<button class="alert amber" data-a="kid" data-k="${esc(x.child)}">📚 שיעורי בית ב${esc(x.subject)} ${diff(x.due,t)===0?"להיום":"למחר"} · ${esc((kidOf(x.child)||{}).n||"")}</button>`);
+  });
+  return items.length?`<div class="alerts">${items.slice(0,6).join("")}</div>`:"";
+}
+function cellMini(s,today,inMonth){
+  const e=eff(s),cls=e.p||"";
+  return {e,cls};
+}
+function calendarCard(t){
+  const legend=`<div class="legend"><span><i class="dot mom"></i>אמא</span><span><i class="dot dad"></i>אבא</span></div>`;
+  const toggle=`<button class="btn sm" data-a="toggleview">${S.view==="week"?"📅 לוח חודשי":"↩︎ שבוע קרוב"}</button>`;
+  let body="";
+  if(S.view==="week"){
+    let cells="";
+    for(let i=0;i<7;i++){
+      const s=add(t,i),e=eff(s);
+      cells+=`<button class="day ${e.p||""} ${i===0?"today-ring":""}" data-a="day" data-d="${s}" aria-label="${esc(longD(s))}${e.p?" עם "+PAR[e.p].n:""}"><span class="dn">${DAYL[dow(s)]}</span><span class="num">${+s.slice(8)}</span><span class="mk">${marks(s)}</span><span class="chg">${e.changed?"שונה":"&nbsp;"}</span></button>`;
+    }
+    body=`<div class="week">${cells}</div>`;
+  }else{
+    const[y,m]=S.month.split("-").map(Number);
+    const first=y+"-"+pad(m)+"-01",lead=dow(first),days=new Date(Date.UTC(y,m,0)).getUTCDate();
+    let cells="";
+    for(let i=0;i<lead;i++)cells+=`<span class="cell void"></span>`;
+    for(let d=1;d<=days;d++){
+      const s=y+"-"+pad(m)+"-"+pad(d),e=eff(s);
+      cells+=`<button class="cell ${e.p||""} ${s===t?"today-ring":""}" data-a="day" data-d="${s}" aria-label="${esc(longD(s))}"><span class="n">${d}</span><span class="mk">${marks(s)}${e.changed?"✎":""}</span></button>`;
+    }
+    const prevOk=true;
+    body=`<div class="monthnav"><button class="btn sm" data-a="mshift" data-n="-1" aria-label="חודש קודם">›</button><b>${MON[m-1]} ${y}</b><button class="btn sm" data-a="mshift" data-n="1" aria-label="חודש הבא">‹</button></div>
+    <div class="dows">${DAYL.map(x=>`<span>${x}</span>`).join("")}</div><div class="mgrid">${cells}</div>`;
+  }
+  return `<section class="card"><div class="cardhead"><h2>${S.view==="week"?"7 הימים הקרובים":"לוח חודשי"}</h2><span style="display:flex;gap:6px">${canAct()?`<button class="btn sm pri" data-a="addev">+ אירוע</button>`:""}${toggle}</span></div>${legend}${body}</section>`;
+}
+
+function kidsBlock(t){
+  const tabs=KIDS.map(k=>`<button class="tab" data-a="kid" data-k="${k.id}" aria-pressed="${k.id===S.kid}"><span class="em">${k.e}</span>${k.n}<small>${k.g}</small></button>`).join("");
+  const k=kidOf(S.kid);
+  const secs=[];
+  if(!k.gan){secs.push(testsSec(k,t));secs.push(hwSec(k,t))}
+  secs.push(ttSec(k,t));secs.push(actSec(k,t));secs.push(eventsSec(k,t));
+  return `<div class="tabs" role="group" aria-label="בחירת ילד">${tabs}</div>${secs.join("")}`;
+}
+const canAct=()=>!S.ro&&!S.dbOff;
+function testsSec(k,t){
+  const list=D.tests.filter(x=>x.child===k.id&&diff(x.date,t)>=0).sort((a,b)=>a.date<b.date?-1:1);
+  const rows=list.map(x=>{
+    const n=diff(x.date,t),b=n===0?"היום!":n===1?"מחר!":"בעוד "+n+" ימים",cl=n<=3?"red":"";
+    const pend=x.status==="pending";
+    const acts=S.mode?`<div class="acts">${pend?`<button class="btn ok sm" data-a="approve" data-id="${esc(x.id)}">אישור ✓</button>`:""}<button class="btn danger sm" data-a="deltest" data-id="${esc(x.id)}">מחיקה</button></div>`:"";
+    return `<li class="row"><div class="body"><span><b>${esc(x.subject)}</b> · ${longD(x.date)}</span>${x.material?`<small>חומר: ${esc(x.material)}</small>`:""}${x.prep&&PAR[x.prep]?`<small>מכין/ה את ${esc(k.n)}: ${PAR[x.prep].n}</small>`:""}<span style="display:flex;gap:6px;flex-wrap:wrap"><span class="tag ${pend?"amber":cl}">${pend?"⏳ ממתין לאישור הורה":b}</span></span></div>${acts}</li>`;
+  }).join("");
+  return `<section class="card"><div class="cardhead"><h2>📝 מבחנים של ${k.n}</h2>${canAct()?`<button class="btn sm pri" data-a="addtest">+ מבחן</button>`:""}</div>${rows?`<ul class="list">${rows}</ul>`:`<div class="empty">אין מבחנים קרובים 🎉</div>`}</section>`;
+}
+function hwSec(k,t){
+  const list=D.homework.filter(x=>x.child===k.id).sort((a,b)=>(a.done-b.done)||(a.due<b.due?-1:a.due>b.due?1:0));
+  const rows=list.map(x=>{
+    const over=!x.done&&diff(x.due,t)<0,n=diff(x.due,t);
+    const tag=x.done?`<span class="tag green">בוצע ✓</span>`:over?`<span class="tag red">עבר המועד (${dm(x.due)})</span>`:`<span class="tag ${n<=1?"amber":""}">${n===0?"להיום":n===1?"למחר":"עד "+longD(x.due)}</span>`;
+    return `<li class="row ${x.done?"done":""}"><button class="chk" data-a="hw" data-id="${esc(x.id)}" aria-pressed="${!!x.done}" aria-label="סימון בוצע" ${canAct()?"":"disabled"}>${x.done?"✓":""}</button><div class="body"><span><b>${esc(x.subject)}</b></span><span>${esc(x.task)}</span>${tag}</div>${S.mode?`<div class="acts"><button class="btn danger sm" data-a="delhw" data-id="${esc(x.id)}">מחיקה</button></div>`:""}</li>`;
+  }).join("");
+  return `<section class="card"><div class="cardhead"><h2>📚 שיעורי בית</h2>${canAct()?`<button class="btn sm pri" data-a="addhw">+ שיעורי בית</button>`:""}</div>${rows?`<ul class="list">${rows}</ul>`:`<div class="empty">אין שיעורי בית פתוחים 🙌</div>`}</section>`;
+}
+function ttSec(k,t){
+  const tmr=dow(add(t,1));
+  const tmrRow=D.timetable[k.id+"_"+tmr];
+  const callout=(tmrRow&&tmrRow.gear?`<div class="callout">🎒 מחר צריך: ${esc(tmrRow.gear)}</div>`:"")+(tmrRow&&tmrRow.ride?`<div class="callout">🚗 מחר הסעה הביתה: ${esc(tmrRow.ride)}</div>`:"");
+  let rows="";
+  for(let d=0;d<=5;d++){
+    const r=D.timetable[k.id+"_"+d];
+    rows+=`<div class="ttday ${d===tmr?"tmr":""}"><b>${DAYN[d]}</b><div>${r&&r.subjects?`<span>${esc(r.subjects)}</span>`:`<span class="empty">עוד לא הוזן</span>`}${r&&r.end?`<span class="endt">🏁 מסתיים ב-${esc(r.end)}</span>`:""}${r&&r.ride?`<span class="endt">🚗 הסעה הביתה: ${esc(r.ride)}</span>`:""}${r&&r.gear?`<span class="gear">🎒 ${esc(r.gear)}</span>`:""}</div>${S.mode&&canAct()?`<button class="btn sm" data-a="edittt" data-d="${d}">עריכה</button>`:"<span></span>"}</div>`;
+  }
+  return `<section class="card"><div class="cardhead"><h2>${k.gan?"🧺 סדר יום וציוד":"🗓️ מערכת שעות וציוד"}</h2></div>${callout}<div class="tt">${rows}</div>${!S.mode&&canAct()?`<div class="empty">עריכה של המערכת: רק הורים (כפתור ״עריכה״ למעלה).</div>`:""}</section>`;
+}
+function eventsSec(k,t){
+  const list=D.events.filter(e=>evKids(e).includes(k.id)&&(e.end||e.date)>=t).sort((a,b)=>a.date<b.date?-1:1);
+  const rows=list.map(e=>{
+    const K=KIND[e.kind]||KIND.school,range=e.end&&e.end!==e.date?dm(e.date)+"–"+dm(e.end):longD(e.date);
+    return `<li class="row"><span style="font-size:1.5rem;line-height:1.2">${K.e}</span><div class="body"><span><b>${esc(e.title)}</b></span><small>${range}${e.time?" · "+esc(e.time):""}${evKids(e).length===KIDS.length?" · כולם":(evKids(e).length>1?" · "+kidsLbl(e):"")}</small>${e.note?`<small>${esc(e.note)}</small>`:""}</div>${S.mode?`<div class="acts"><button class="btn sm" data-a="editev" data-id="${esc(e.id)}">עריכה</button><button class="btn danger sm" data-a="delev" data-id="${esc(e.id)}">מחיקה</button></div>`:""}</li>`;
+  }).join("");
+  return `<section class="card"><div class="cardhead"><h2>🎈 אירועים${k?" · "+k.n:""}</h2>${S.mode&&canAct()?`<button class="btn sm pri" data-a="addev">+ אירוע</button>`:""}</div>${rows?`<ul class="list">${rows}</ul>`:`<div class="empty">אין אירועים קרובים.</div>`}</section>`;
+}
+function actSec(k,t){
+  const td=dow(t),tm=(td+1)%7;
+  const list=D.activities.filter(a=>a.child===k.id).sort((a,b)=>(a.dow-b.dow)||String(a.start||"").localeCompare(String(b.start||"")));
+  const rows=list.map(a=>{
+    const ic=a.kind==="leisure"?"🎮":"⚽";
+    const when=a.dow===td?`<span class="tag amber">היום</span>`:a.dow===tm?`<span class="tag">מחר</span>`:"";
+    const time=a.start?a.start+(a.end?"–"+a.end:""):"";
+    const drv=a.driver==="bus"?`<small>🚌 הסעה</small>`:(a.driver==="mom"||a.driver==="dad")?`<small>🚗 ${PAR[a.driver].n} מסיע${a.driver==="mom"?"ה":""}</small>`:"";
+    return `<li class="row"><span style="font-size:1.5rem;line-height:1.2">${ic}</span><div class="body"><span><b>${esc(a.title)}</b></span><small>יום ${DAYN[a.dow]}${time?" · "+esc(time):""}</small>${a.place?`<small>📍 ${esc(a.place)}</small>`:""}${drv}${a.gear?`<small>🎒 ${esc(a.gear)}</small>`:""}${a.note?`<small>${esc(a.note)}</small>`:""}${when?`<span style="display:flex;gap:6px">${when}</span>`:""}</div>${S.mode?`<div class="acts"><button class="btn danger sm" data-a="delact" data-id="${esc(a.id)}">מחיקה</button></div>`:""}</li>`;
+  }).join("");
+  return `<section class="card"><div class="cardhead"><h2>⚽ חוגים ופנאי · ${k.n}</h2>${canAct()?`<button class="btn sm pri" data-a="addact">+ חוג / פעילות</button>`:""}</div>${rows?`<ul class="list">${rows}</ul>`:`<div class="empty">עוד לא הוזנו חוגים או פעילות פנאי.</div>`}</section>`;
+}
+function logBlock(){
+  const rows=D.changes.slice().sort((a,b)=>b.at-a.at).slice(0,15).map(c=>{
+    const by=PAR[c.by]||{n:"הורה",v:"שינה/תה"};
+    return `<li>✎ ${by.n} ${by.v} את ${longD(c.date)} מ${PAR[c.from]?PAR[c.from].n:"—"} ל${PAR[c.to]?PAR[c.to].n:"—"}${c.note?" · "+esc(c.note):""} · ${rel(c.at)}</li>`;
+  }).join("");
+  return `<section class="card"><h2>יומן שינויים</h2>${rows?`<ul class="list log">${rows}</ul>`:`<div class="empty">עוד לא היו שינויים בחלוקה.</div>`}</section>`;
+}
+
+/* ---------- sheets ---------- */
+function openSheet(html){const s=$("#sheet");s.innerHTML=`<div class="panel" role="dialog" aria-modal="true">${html}</div>`;s.hidden=false;const f=s.querySelector("input,textarea,select,button");if(f&&f.tagName!=="BUTTON")f.focus()}
+function closeSheet(){$("#sheet").hidden=true;$("#sheet").innerHTML=""}
+let tt;function toast(m){const e=$("#toast");e.textContent=m;e.hidden=false;clearTimeout(tt);tt=setTimeout(()=>e.hidden=true,2800)}
+const closeBtn=`<button class="btn" data-a="close" type="button">סגירה</button>`;
+const opt=(v,l,sel)=>`<option value="${v}"${sel?" selected":""}>${l}</option>`;
+
+function daySheet(s){
+  const e=eff(s),evs=evOn(s),ts=testsOn(s),hw=D.homework.filter(x=>x.due===s&&!x.done);
+  let h=`<h3>${longD(s)}</h3>`;
+  if(e.p)h+=`<div><span class="tag" style="font-size:1rem;background:var(--${e.p}-t);color:var(--${e.p})">${PAR[e.p].e} עם ${PAR[e.p].n}</span>${e.changed?` <span class="tag">✎ שונה ע״י ${PAR[e.o.by]?PAR[e.o.by].n:"הורה"}, במקור ${PAR[e.b].n}</span>`:""}</div>`;
+  else h+=`<div class="empty">מחוץ לתקופת החלוקה (${dm(START)}–${dm(END)}).</div>`;
+  if(e.changed&&e.o.note)h+=`<div class="empty">סיבה: ${esc(e.o.note)}</div>`;
+  if(evs.length)h+=`<ul class="list">${evs.map(x=>`<li class="row"><span style="font-size:1.4rem">${(KIND[x.kind]||KIND.school).e}</span><div class="body"><b>${esc(x.title)}</b>${x.time?`<small>${esc(x.time)}</small>`:""}${x.note?`<small>${esc(x.note)}</small>`:""}<small>${esc(kidsLbl(x))}</small></div></li>`).join("")}</ul>`;
+  if(ts.length)h+=`<ul class="list">${ts.map(x=>`<li class="row"><span style="font-size:1.4rem">📝</span><div class="body"><b>מבחן ב${esc(x.subject)} · ${esc((kidOf(x.child)||{}).n||"")}</b>${x.status==="pending"?`<small>ממתין לאישור הורה</small>`:""}</div></li>`).join("")}</ul>`;
+  if(hw.length)h+=`<ul class="list">${hw.map(x=>`<li class="row"><span style="font-size:1.4rem">📚</span><div class="body"><b>להגשה: ${esc(x.subject)} · ${esc((kidOf(x.child)||{}).n||"")}</b><small>${esc(x.task)}</small></div></li>`).join("")}</ul>`;
+  const acts=D.activities.filter(a=>a.dow===dow(s)).sort((a,b)=>String(a.start||"").localeCompare(String(b.start||"")));
+  if(acts.length)h+=`<ul class="list">${acts.map(a=>`<li class="row"><span style="font-size:1.4rem">${a.kind==="leisure"?"🎮":"⚽"}</span><div class="body"><b>${esc(a.title)} · ${esc((kidOf(a.child)||{}).n||"")}</b><small>${a.start?esc(a.start)+(a.end?"–"+esc(a.end):""):""}${a.place?" · "+esc(a.place):""}</small></div></li>`).join("")}</ul>`;
+  if(S.mode&&canAct()&&e.b){
+    const other=e.p==="mom"?"dad":"mom";
+    h+=`<form data-form="swap" data-d="${s}" class="card" style="gap:10px"><div class="field"><label for="sw-note">סיבה (לא חובה)</label><input id="sw-note" placeholder="למשל: נסיעה, מחלה, החלפה מוסכמת"></div><div class="btnrow"><button class="btn ${other}" type="submit" data-to="${other}">להעביר לצד של ${PAR[other].n} ${PAR[other].e}</button>${e.changed?`<button class="btn" type="submit" data-to="reset">חזרה לברירת מחדל (${PAR[e.b].n})</button>`:""}</div></form>`;
+  }
+  if(canAct())h+=`<button class="btn pri" data-a="addev" data-d="${s}">+ אירוע ביום הזה</button>`;
+  h+=`<div class="btnrow">${closeBtn}</div>`;
+  openSheet(h);
+}
+function loginSheet(){
+  if(!S.cfgLoaded){toast("טוען, נסו שוב בעוד רגע");return}
+  const has=!!(D.config&&D.config.pinHash);
+  openSheet(`<h3>${has?"כניסה להורים":"הגדרת קוד להורים"}</h3><form data-form="pin"><div class="field"><label for="pin-1">${has?"קוד":"בחרו קוד (4 ספרות ומעלה)"}</label><input id="pin-1" type="password" inputmode="numeric" autocomplete="off" maxlength="12" required></div>${has?"":`<div class="field"><label for="pin-2">אימות הקוד</label><input id="pin-2" type="password" inputmode="numeric" autocomplete="off" maxlength="12" required></div>`}<div class="btnrow"><button class="btn mom" type="submit" data-p="mom" style="min-height:56px;font-size:1.1rem">אני אמא 💜</button><button class="btn dad" type="submit" data-p="dad" style="min-height:56px;font-size:1.1rem">אני אבא 💙</button></div><p class="empty" id="pin-msg" role="alert"></p><p class="empty">${has?"":"הקוד משותף לשני ההורים ונקבע פעם אחת. "}הבחירה נשמרת רק במכשיר הזה.</p><div class="btnrow">${closeBtn}</div></form>`);
+}
+function testSheet(){
+  const k=kidOf(S.kid);
+  openSheet(`<h3>מבחן חדש ל${k.n}</h3><form data-form="test"><div class="field"><label for="t-subject">מקצוע</label><input id="t-subject" required maxlength="40"></div><div class="field"><label for="t-date">תאריך</label><input id="t-date" type="date" required min="${todayS()}"></div><div class="field"><label for="t-material">חומר ללימוד</label><textarea id="t-material" maxlength="300"></textarea></div><div class="field"><label for="t-prep">מי מכין/ה את ${k.n}?</label><select id="t-prep">${opt("","לא נקבע")}${opt("mom","אמא")}${opt("dad","אבא")}</select></div>${S.mode?"":`<p class="empty">המבחן יופיע כ״ממתין לאישור הורה״.</p>`}<div class="btnrow"><button class="btn pri" type="submit">שמירה</button>${closeBtn}</div></form>`);
+}
+function hwSheet(){
+  const k=kidOf(S.kid);
+  openSheet(`<h3>שיעורי בית ל${k.n}</h3><form data-form="hw"><div class="field"><label for="h-subject">מקצוע</label><input id="h-subject" required maxlength="40"></div><div class="field"><label for="h-task">מה צריך לעשות</label><textarea id="h-task" required maxlength="300"></textarea></div><div class="field"><label for="h-due">עד מתי</label><input id="h-due" type="date" required min="${todayS()}"></div><div class="btnrow"><button class="btn pri" type="submit">שמירה</button>${closeBtn}</div></form>`);
+}
+function evSheet(d0,ex){ex=ex||{};
+  const sel=ex.id?evKids(ex):[S.kid];
+  const kidChips=`<label class="chip" for="e-kall"><input type="checkbox" id="e-kall"${sel.length===KIDS.length?" checked":""}> כולם</label>`+KIDS.map(k=>`<label class="chip" for="e-k-${k.id}"><input type="checkbox" id="e-k-${k.id}"${sel.includes(k.id)?" checked":""}> ${k.n}</label>`).join("");
+  openSheet(`<h3>${ex.id?"עריכת אירוע":"אירוע חדש"}</h3><form data-form="ev"${ex.id?` data-id="${esc(ex.id)}"`:""}><div class="field"><label for="e-title">שם האירוע</label><input id="e-title" required maxlength="60" value="${esc(ex.title||"")}"></div><div class="field"><label for="e-kind">סוג</label><select id="e-kind">${Object.entries(KIND).map(([v,x])=>opt(v,x.e+" "+x.n,v===ex.kind)).join("")}</select></div><div><div class="sublbl">למי (אפשר כמה)</div><div class="chips" style="margin-top:6px">${kidChips}</div></div><div class="two"><div class="field"><label for="e-date">תאריך</label><input id="e-date" type="date" required value="${esc(ex.date||d0||"")}"></div><div class="field"><label for="e-end">עד תאריך (אם כמה ימים)</label><input id="e-end" type="date" value="${esc(ex.end||"")}"></div></div><div class="field"><label for="e-time">שעה (לא חובה)</label><input id="e-time" maxlength="30" placeholder="למשל 17:30" value="${esc(ex.time||"")}"></div><div class="field"><label for="e-note">הערה</label><input id="e-note" maxlength="120" value="${esc(ex.note||"")}"></div><div class="btnrow"><button class="btn pri" type="submit">שמירה</button>${closeBtn}</div></form>`);
+}
+function actSheet(){
+  const k=kidOf(S.kid);
+  const days=DAYN.map((n,i)=>`<label class="chip" for="a-d${i}"><input type="checkbox" id="a-d${i}"> ${n}</label>`).join("");
+  openSheet(`<h3>חוג או פעילות ל${k.n}</h3><form data-form="act"><div class="field"><label for="a-title">שם</label><input id="a-title" required maxlength="60" placeholder="למשל כדורגל, שחייה, משחקים עם חברים"></div><div class="field"><label for="a-kind">סוג</label><select id="a-kind">${opt("class","⚽ חוג")}${opt("leisure","🎮 פנאי")}</select></div><div><div class="sublbl">באיזה ימים (אפשר כמה)</div><div class="chips" style="margin-top:6px">${days}</div></div><div class="two"><div class="field"><label for="a-start">שעת התחלה</label><input id="a-start" type="time"></div><div class="field"><label for="a-end">שעת סיום</label><input id="a-end" type="time"></div></div><div class="field"><label for="a-place">מקום</label><input id="a-place" maxlength="80"></div><div class="field"><label for="a-driver">מי מסיע/ה</label><select id="a-driver">${opt("","לא נקבע")}${opt("mom","אמא")}${opt("dad","אבא")}${opt("bus","הסעה")}</select></div><div class="field"><label for="a-gear">ציוד נדרש</label><input id="a-gear" maxlength="120" placeholder="נעלי כדורגל, בקבוק מים"></div><div class="field"><label for="a-note">הערה</label><input id="a-note" maxlength="120"></div><div class="btnrow"><button class="btn pri" type="submit">שמירה</button>${closeBtn}</div></form>`);
+}
+function ttSheet(d){
+  const k=kidOf(S.kid),r=D.timetable[k.id+"_"+d]||{};
+  openSheet(`<h3>${k.n} · יום ${DAYN[d]}</h3><form data-form="tt" data-d="${d}"><div class="field"><label for="tt-sub">${k.gan?"סדר היום":"מקצועות"}</label><textarea id="tt-sub" maxlength="300" placeholder="חשבון, עברית, ספורט">${esc(r.subjects||"")}</textarea></div><div class="field"><label for="tt-end">שעת סיום</label><input id="tt-end" type="time" value="${esc(r.end||"")}"></div><div class="field"><label for="tt-ride">הסעה הביתה</label><textarea id="tt-ride" maxlength="200" placeholder="למשל: אבא אוסף ב-13:30, או הסעה של החוג">${esc(r.ride||"")}</textarea></div><div class="field"><label for="tt-gear">ציוד נדרש</label><input id="tt-gear" maxlength="150" placeholder="נעלי ספורט, תנ״ך, בגדי ים" value="${esc(r.gear||"")}"></div><div class="btnrow"><button class="btn pri" type="submit">שמירה</button>${closeBtn}</div></form>`);
+}
+
+/* ---------- actions ---------- */
+async function run(fn,ok){try{await fn();if(ok)toast(ok)}catch(e){toast("השמירה לא הצליחה. נסו שוב.")}}
+const col=n=>db.collection(n);
+document.addEventListener("click",ev=>{
+  if(ev.target.id==="sheet"){closeSheet();return}
+  const b=ev.target.closest("[data-a]");if(!b)return;
+  const a=b.dataset.a,id=b.dataset.id;
+  switch(a){
+    case"close":closeSheet();break;
+    case"seed":seedData();break;
+    case"login":loginSheet();break;
+    case"login-as":S.mode=b.dataset.p;save("fam_mode",S.mode);closeSheet();render();break;
+    case"exit":S.mode=null;save("fam_mode","");render();break;
+    case"day":daySheet(b.dataset.d);break;
+    case"toggleview":S.view=S.view==="week"?"month":"week";render();break;
+    case"mshift":{const[y,m]=S.month.split("-").map(Number),d=new Date(Date.UTC(y,m-1+Number(b.dataset.n),1));S.month=toS(d).slice(0,7);render();break}
+    case"kid":S.kid=b.dataset.k;save("fam_kid",S.kid);render();break;
+    case"addtest":testSheet();break;
+    case"addhw":hwSheet();break;
+    case"addev":if(!S.mode){loginSheet();break}evSheet(b.dataset.d);break;
+    case"addact":if(!S.mode){loginSheet();break}actSheet();break;
+    case"delact":run(()=>col("activities").doc(id).delete(),"נמחק");break;
+    case"edittt":ttSheet(Number(b.dataset.d));break;
+    case"approve":run(()=>col("tests").doc(id).update({status:"approved",approvedBy:S.mode}),"המבחן אושר");break;
+    case"deltest":run(()=>col("tests").doc(id).delete(),"נמחק");break;
+    case"delhw":run(()=>col("homework").doc(id).delete(),"נמחק");break;
+    case"delev":run(()=>col("events").doc(id).delete(),"נמחק");break;
+    case"editev":{const x=D.events.find(e=>e.id===id);if(x)evSheet("",x);break}
+    case"hw":{const x=D.homework.find(h=>h.id===id);if(x)run(()=>col("homework").doc(id).update({done:!x.done,doneAt:Date.now()}));break}
+  }
+});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#sheet").hidden)closeSheet()});
+document.addEventListener("change",ev=>{
+  const t=ev.target,all=document.querySelector("#e-kall");
+  if(!t||!t.id||!all)return;
+  if(t.id==="e-kall"){KIDS.forEach(k=>{const c=document.querySelector("#e-k-"+k.id);if(c)c.checked=t.checked})}
+  else if(t.id.indexOf("e-k-")===0){all.checked=KIDS.every(k=>document.querySelector("#e-k-"+k.id).checked)}
+});
+document.addEventListener("submit",ev=>{
+  const f=ev.target.closest("form[data-form]");if(!f)return;ev.preventDefault();
+  const v=id=>(f.querySelector("#"+id)||{}).value||"";
+  const kind=f.dataset.form;
+  if(kind==="swap"){
+    const s=f.dataset.d,to=ev.submitter&&ev.submitter.dataset.to,cur=eff(s),note=v("sw-note").trim();
+    if(!to||!S.mode)return;
+    const target=to==="reset"?cur.b:to;
+    closeSheet();
+    run(async()=>{
+      if(target===cur.b)await col("overrides").doc(s).delete();
+      else await col("overrides").doc(s).set({parent:target,by:S.mode,at:Date.now(),note,base:cur.b});
+      await col("changes").add({date:s,from:cur.p,to:target,by:S.mode,at:Date.now(),note});
+    },"השינוי נשמר");
+  }else if(kind==="test"){
+    const o={child:S.kid,subject:v("t-subject").trim(),date:v("t-date"),material:v("t-material").trim(),prep:v("t-prep"),status:S.mode?"approved":"pending",addedBy:S.mode||"child",at:Date.now()};
+    closeSheet();run(()=>col("tests").add(o),S.mode?"המבחן נוסף":"נשלח לאישור הורה");
+  }else if(kind==="hw"){
+    const o={child:S.kid,subject:v("h-subject").trim(),task:v("h-task").trim(),due:v("h-due"),done:false,addedBy:S.mode||"child",at:Date.now()};
+    closeSheet();run(()=>col("homework").add(o),"נוסף");
+  }else if(kind==="ev"){
+    const ks=KIDS.map(k=>k.id).filter(id=>f.querySelector("#e-k-"+id).checked);
+    if(!ks.length){toast("בחרו לפחות ילד אחד");return}
+    const o={title:v("e-title").trim(),kind:v("e-kind"),kids:ks,child:ks.length===KIDS.length?"all":(ks.length===1?ks[0]:"multi"),date:v("e-date"),end:v("e-end")||"",time:v("e-time").trim(),note:v("e-note").trim(),by:S.mode,at:Date.now()};
+    if(o.end&&o.end<o.date)o.end=o.date;
+    closeSheet();
+    if(f.dataset.id)run(()=>col("events").doc(f.dataset.id).update(o),"האירוע עודכן");
+    else run(()=>col("events").add(o),"האירוע נוסף");
+  }else if(kind==="act"){
+    const days=[0,1,2,3,4,5,6].filter(i=>f.querySelector("#a-d"+i).checked);
+    if(!days.length){toast("בחרו לפחות יום אחד");return}
+    const base={child:S.kid,title:v("a-title").trim(),kind:v("a-kind"),start:v("a-start"),end:v("a-end"),place:v("a-place").trim(),driver:v("a-driver"),gear:v("a-gear").trim(),note:v("a-note").trim(),by:S.mode,at:Date.now()};
+    closeSheet();run(()=>Promise.all(days.map(d=>col("activities").add(Object.assign({dow:d},base)))),"נוסף");
+  }else if(kind==="pin"){
+    pinSubmit(f,ev.submitter);
+  }else if(kind==="tt"){
+    const d=f.dataset.d;
+    closeSheet();run(()=>col("timetable").doc(S.kid+"_"+d).set({child:S.kid,dow:Number(d),subjects:v("tt-sub").trim(),gear:v("tt-gear").trim(),end:v("tt-end"),ride:v("tt-ride").trim(),by:S.mode,at:Date.now()}),"נשמר");
+  }
+});
+
+/* ---------- Firebase ---------- */
+/* >>> הדביקו כאן את פרטי החיבור שקיבלתם מ-Firebase (החליפו את כל הבלוק) >>> */
+const FIREBASE_CONFIG={
+  apiKey:"AIzaSyBr6uMIR_i_eA8M0ayYptoAbYzpqEu5bwA",
+  authDomain:"family-board-2dd99.firebaseapp.com",
+  projectId:"family-board-2dd99",
+  storageBucket:"family-board-2dd99.firebasestorage.app",
+  messagingSenderId:"298475978084",
+  appId:"1:298475978084:web:cd2e5e3072760e3f594e71"
+};
+/* <<< סוף הבלוק <<< */
+const SEED={"tests": {"ariel-20261105-math": {"addedBy": "system", "at": 1793909500000, "child": "ariel", "date": "2026-11-05", "material": "", "prep": "", "status": "approved", "subject": "מתמטיקה"}, "ariel-20261126-hebrew": {"addedBy": "system", "at": 1793909500000, "child": "ariel", "date": "2026-11-26", "material": "", "prep": "", "status": "approved", "subject": "עברית"}, "ariel-20261224-hebrew": {"addedBy": "system", "at": 1793909500000, "child": "ariel", "date": "2026-12-24", "material": "", "prep": "", "status": "approved", "subject": "עברית"}, "ariel-20270103-english": {"addedBy": "system", "at": 1793909500000, "child": "ariel", "date": "2027-01-03", "material": "", "prep": "", "status": "approved", "subject": "אנגלית"}, "ariel-20270115-math": {"addedBy": "system", "at": 1793909500000, "child": "ariel", "date": "2027-01-15", "material": "", "prep": "", "status": "approved", "subject": "מתמטיקה"}, "ofir-20261108-hebrew": {"addedBy": "system", "at": 1793909500000, "child": "ofir", "date": "2026-11-08", "material": "", "prep": "", "status": "approved", "subject": "עברית"}, "ofir-20261115-english": {"addedBy": "system", "at": 1793909500000, "child": "ofir", "date": "2026-11-15", "material": "", "prep": "", "status": "approved", "subject": "אנגלית"}, "ofir-20261124-science": {"addedBy": "system", "at": 1793909500000, "child": "ofir", "date": "2026-11-24", "material": "", "prep": "", "status": "approved", "subject": "מדעים"}, "ofir-20261204-math": {"addedBy": "system", "at": 1793909500000, "child": "ofir", "date": "2026-12-04", "material": "שברים פשוטים + גאומטריה", "prep": "", "status": "approved", "subject": "מתמטיקה"}, "ofir-20270103-hebrew": {"addedBy": "system", "at": 1793909500000, "child": "ofir", "date": "2027-01-03", "material": "", "prep": "", "status": "approved", "subject": "עברית"}, "ofir-20270111-math": {"addedBy": "system", "at": 1793909500000, "child": "ofir", "date": "2027-01-11", "material": "מבחן מסכם מחצית", "prep": "", "status": "approved", "subject": "מתמטיקה"}, "ofir-20270117-english": {"addedBy": "system", "at": 1793909500000, "child": "ofir", "date": "2027-01-17", "material": "", "prep": "", "status": "approved", "subject": "אנגלית"}}, "homework": {"ofir-20270126-science-task": {"addedBy": "system", "at": 1793909500000, "child": "ofir", "done": false, "due": "2027-01-26", "subject": "מדעים", "task": "הגשת משימה"}}, "timetable": {"ariel_0": {"at": 1793910775077, "by": "mom", "child": "ariel", "dow": 0, "end": "13:30", "gear": "", "ride": "ג׳ואנה מחזירה עם אופיר", "subjects": "1. אנגלית\n2. תנ״ך\n3. ערבית\n4. אמנות\n5. שבילי מורשת\n6. מדעים"}, "ariel_1": {"at": 1793910853294, "by": "mom", "child": "ariel", "dow": 1, "end": "13:30", "gear": "", "ride": "איסוף עלינו מחזירים גם את בן", "subjects": "1. חנ״ג\n2. מולדת\n3. עברית\n4. עברית\n5. מתמטיקה\n6. מתמטיקה"}, "ariel_2": {"at": 1793910813308, "by": "mom", "child": "ariel", "dow": 2, "end": "14:15", "gear": "תיק לבריכה: מגבת, משקפת,בגדי החלפה", "ride": "איסוף עלינו", "subjects": "1. חשיבה מחשובית\n2. חנ״ג\n3. אנגלית\n4. עברית\n5. זוזו\n6. מועצה ירוקה"}, "ariel_3": {"at": 1793910824757, "by": "mom", "child": "ariel", "dow": 3, "end": "14:15", "gear": "", "ride": "איסוף עלינו", "subjects": "1. לשון\n2. תנ״ך\n3. עברית\n4. עברית\n5. מתמטיקה\n6. אנגלית\n7. מקהלה"}, "ariel_4": {"at": 1793910834677, "by": "mom", "child": "ariel", "dow": 4, "end": "14:15", "gear": "", "ride": "איסוף עלינו", "subjects": "1. עברית\n2. עברית\n3. מתמטיקה\n4. מתמטיקה\n5. אנגלית\n6. מדעים\n7. פרטני עברית"}, "ariel_5": {"at": 1793909403607, "by": "mom", "child": "ariel", "dow": 5, "end": "11:45", "gear": "", "subjects": "1. מתמטיקה\n2. מדעים\n3. מפתח הלב\n4. כישורי חיים"}, "itamar_2": {"at": 1793909063149, "by": "mom", "child": "itamar", "dow": 2, "end": "", "gear": "נעלי ספורט", "subjects": ""}, "itamar_5": {"at": 1793967097932, "by": "mom", "child": "itamar", "dow": 5, "end": "", "gear": "חלה ללא גלוטן", "ride": "", "subjects": "קבלת שבת"}, "ofir_0": {"at": 1793910656274, "by": "mom", "child": "ofir", "dow": 0, "end": "13:30", "gear": "", "ride": "ג׳ואנה אוספת את אופיר ואריאל", "subjects": "8:00 עברית (טליה)\n8:50 עברית (טליה)\n10:15 אנגלית (פאתן)\n11:00 אנגלית (פאתן)\n12:00 מורשת (שמרית)\n12:45 העשרה מתמטית (גנית)"}, "ofir_1": {"at": 1793910742699, "by": "mom", "child": "ofir", "dow": 1, "end": "13:30", "gear": "", "ride": "אופיר ממשיך עצמאית לתמר", "subjects": "8:00 מתמטיקה (שמרית)\n8:50 מתמטיקה (שמרית)\n10:15 עברית (טליה)\n11:00 חינוך גופני (בלה)\n12:00 עברית (טליה)\n12:45 אנגלית (פאתן)"}, "ofir_2": {"at": 1793910943939, "by": "mom", "child": "ofir", "dow": 2, "end": "13:30", "gear": "", "ride": "איסוף עלינו", "subjects": "8:00 מדעים (נטע)\n8:50 מדעים (נטע)\n10:15 חינוך גופני (בלה)\n11:00 שבילי מורשת (טליה)\n12:00 אנגלית (פאתן)\n12:45 דודי (מדריך חיצוני)"}, "ofir_3": {"at": 1793910717857, "by": "mom", "child": "ofir", "dow": 3, "end": "15:00", "gear": "", "ride": "איסוף עלינו", "subjects": "8:00 אומנות (דנה)\n8:50 אנגלית (פאתן)\n10:15 מדעים (נטע)\n11:00 ערבית (הדיל)\n12:00 כישורי חיים (שמרית)\n12:45 גאוגרפיה (שמרית)\nכדורגל"}, "ofir_4": {"at": 1793910698933, "by": "mom", "child": "ofir", "dow": 4, "end": "12:45", "gear": "", "ride": "ג׳ואנה מחזירה את אופיר", "subjects": "8:00 עברית (טליה)\n8:50 עברית (טליה)\n10:15 מתמטיקה (שמרית)\n11:00 מתמטיקה (שמרית)\n12:00 תנ״ך (שמרית)"}, "ofir_5": {"at": 1793900000000, "by": "system", "child": "ofir", "dow": 5, "end": "11:45", "gear": "", "subjects": "8:00 מתמטיקה (שמרית)\n8:50 מתמטיקה (שמרית)\n10:15 תנ״ך (שמרית)\n11:00 שיעור מחנכת (שמרית)"}}, "events": {"84aa95v3275mno8dx24r": {"at": 1793910261905, "by": "mom", "child": "itamar", "date": "2026-12-04", "end": "", "kind": "school", "note": "", "time": "9:45", "title": "מסיבת חנוכה בגן"}, "8wqnve133rwdxaqzv7fx": {"at": 1793910246007, "by": "mom", "child": "all", "date": "2026-11-25", "end": "", "kind": "family", "note": "", "time": "", "title": "אריאלי יומולדת🥳"}, "9kmwl6m6d6c1kifldt3j": {"at": 1793966318861, "by": "mom", "child": "itamar", "date": "2026-11-17", "end": "", "kind": "medical", "note": "", "time": "7:40", "title": "ביופסיה תל השומר"}, "gan-20261206-hanukkah-open": {"at": 1793966600000, "by": "system", "child": "itamar", "date": "2026-12-06", "end": "2026-12-10", "kind": "school", "note": "פעילות יול״א.", "time": "07:10–16:30", "title": "חנוכה: הגן פועל"}, "gan-20261211-hanukkah-off": {"at": 1793967432087, "by": "mom", "child": "itamar", "date": "2026-12-11", "end": "", "kids": ["itamar"], "kind": "holiday", "note": "הגן סגור.", "time": "", "title": "חופשה בגן: חנוכה"}, "gan-20270323-purim-off": {"at": 1793967469623, "by": "mom", "child": "itamar", "date": "2027-03-23", "end": "", "kids": ["itamar"], "kind": "holiday", "note": "", "time": "", "title": "חופשה בגן: פורים"}, "gan-20270324-purim-open": {"at": 1793966600000, "by": "system", "child": "itamar", "date": "2027-03-24", "end": "", "kind": "school", "note": "פעילות יול״א.", "time": "07:10–16:30", "title": "פורים: הגן פועל"}, "gan-20270413-pesach-open1": {"at": 1793966600000, "by": "system", "child": "itamar", "date": "2027-04-13", "end": "2027-04-15", "kind": "school", "note": "פעילות יול״א.", "time": "07:10–16:30", "title": "פסח: הגן פועל"}, "gan-20270416-pesach-off1": {"at": 1793966600000, "by": "system", "child": "itamar", "date": "2027-04-16", "end": "", "kind": "holiday", "note": "חוזרים לפעילות ב-18/4.", "time": "", "title": "חופשה בגן: פסח"}, "gan-20270418-pesach-open2": {"at": 1793966600000, "by": "system", "child": "itamar", "date": "2027-04-18", "end": "2027-04-19", "kind": "school", "note": "פעילות יול״א.", "time": "07:10–16:30", "title": "פסח: הגן פועל"}, "gan-20270420-pesach-off2": {"at": 1793966600000, "by": "system", "child": "itamar", "date": "2027-04-20", "end": "2027-04-28", "kind": "holiday", "note": "חוזרים לפעילות ב-29/4.", "time": "", "title": "חופשה בגן: פסח"}, "gan-20270511-memorial": {"at": 1793966600000, "by": "system", "child": "itamar", "date": "2027-05-11", "end": "", "kind": "school", "note": "אין פעילות יול״א.", "time": "עד 12:00", "title": "יום הזיכרון: הגן פועל עד 12:00"}, "gan-20270512-independence": {"at": 1793966600000, "by": "system", "child": "itamar", "date": "2027-05-12", "end": "", "kind": "holiday", "note": "חוזרים לפעילות ב-13/5.", "time": "", "title": "חופשה בגן: יום העצמאות"}, "gan-20270610-shavuot": {"at": 1793966600000, "by": "system", "child": "itamar", "date": "2027-06-10", "end": "2027-06-11", "kind": "holiday", "note": "חוזרים לפעילות ב-13/6.", "time": "", "title": "חופשה בגן: שבועות"}, "gan-20270701-summer": {"at": 1793966600000, "by": "system", "child": "itamar", "date": "2027-07-01", "end": "2027-08-08", "kind": "school", "note": "הפעלה משולבת של תכנית ניצנים ותכנית קיץ.", "time": "", "title": "קייטנת קיץ בגן"}, "hanukkah-2026": {"at": 1793967330510, "by": "mom", "child": "multi", "date": "2026-12-06", "end": "2026-12-12", "kids": ["ofir", "ariel"], "kind": "holiday", "note": "לפי לוח משרד החינוך (בתי ספר). הגן של איתמר פועל ב-6–10/12 ויש חופשה ב-11/12.", "time": "", "title": "חופשת חנוכה 🕎"}, "sqngp1hbi2zvx8r1q0lb": {"at": 1793910318185, "by": "mom", "child": "ariel", "date": "2026-11-16", "end": "", "kind": "school", "note": "", "time": "", "title": "תורנות נשק וסע"}}, "activities": {"1ltn2uz4077n7abbwskn": {"at": 1793910550200, "by": "mom", "child": "ofir", "dow": 1, "driver": "", "end": "14:35", "gear": "", "kind": "class", "note": "", "place": "מניה שוחט 7. קומה 4, דירה 12", "start": "13:50", "title": "מפגש תמר"}, "45jcflf15fdu4lqh31tx": {"at": 1793909447723, "by": "mom", "child": "ariel", "dow": 3, "driver": "", "end": "18:00", "gear": "", "kind": "class", "note": "", "place": "מתנ\"ס לב הפארק", "start": "17:00", "title": "סטודיו לאוד"}, "8rupb2lzabi2ibjz3vfe": {"at": 1793909584806, "by": "mom", "child": "ofir", "dow": 0, "driver": "", "end": "18:30", "gear": "", "kind": "class", "note": "", "place": "יחד מחוננים נווה זמר", "start": "17:30", "title": "חושבים AI"}, "bshadrgvvlkxmr87hdmn": {"at": 1793909708789, "by": "mom", "child": "ariel", "dow": 5, "driver": "", "end": "17:30", "gear": "", "kind": "class", "note": "", "place": "לב הפארק", "start": "16:00", "title": "צופים"}, "k06z31qhggx2fkaztomh": {"at": 1793909741643, "by": "mom", "child": "ofir", "dow": 5, "driver": "", "end": "17:30", "gear": "", "kind": "class", "note": "", "place": "", "start": "16:00", "title": "צופים"}, "o34ph2k29v3y14tsfqqr": {"at": 1793909523026, "by": "mom", "child": "ofir", "dow": 1, "driver": "", "end": "19:00", "gear": "", "kind": "class", "note": "", "place": "ספורטק נווה זמר", "start": "18:00", "title": "כדורגל שושקס"}, "rxlkmdsxj6samkjzg8jl": {"at": 1793909634057, "by": "mom", "child": "ofir", "dow": 2, "driver": "", "end": "18:30", "gear": "", "kind": "class", "note": "", "place": "לב הפארק", "start": "17:00", "title": "צופים"}, "v26kty2jie13tnwd29ou": {"at": 1793909672854, "by": "mom", "child": "ariel", "dow": 2, "driver": "", "end": "18:30", "gear": "", "kind": "class", "note": "", "place": "לב הפארק", "start": "17:00", "title": "צופים"}}};
+const COLLECTIONS=8;
+const configured=()=>!/PASTE/.test(String(FIREBASE_CONFIG.apiKey)+String(FIREBASE_CONFIG.projectId));
+async function sha(s){
+  const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode("fam:"+s));
+  return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,"0")).join("");
+}
+async function pinSubmit(f,btn){
+  const p=btn&&btn.dataset.p,msg=f.querySelector("#pin-msg");
+  const a=f.querySelector("#pin-1").value.trim(),b=f.querySelector("#pin-2");
+  const has=!!(D.config&&D.config.pinHash);
+  try{
+    if(has){
+      if((await sha(a))!==D.config.pinHash){msg.textContent="הקוד לא נכון. נסו שוב.";return}
+    }else{
+      if(!/^\d{4,12}$/.test(a)){msg.textContent="הקוד צריך להיות 4 ספרות או יותר.";return}
+      if(b&&b.value.trim()!==a){msg.textContent="שני הקודים לא זהים.";return}
+      await db.collection("config").doc("main").set({pinHash:await sha(a)});
+    }
+    S.mode=p;save("fam_mode",p);closeSheet();render();
+  }catch(e){msg.textContent="לא הצלחנו לשמור. בדקו חיבור לאינטרנט ונסו שוב."}
+}
+function seedBlock(){
+  if(!S.mode||!db||S.loaded<COLLECTIONS)return"";
+  const n=D.tests.length+D.homework.length+D.events.length+D.activities.length+Object.keys(D.timetable).length;
+  if(n>0)return"";
+  return `<section class="card"><h2>טעינת נתונים ראשונית</h2><div class="empty">המסד עדיין ריק. אפשר לטעון את מה שהוכנס עד עכשיו: מבחנים, מערכות שעות, חוגים ואירועים.</div><button class="btn pri" data-a="seed">טעינת הנתונים</button></section>`;
+}
+async function seedData(){
+  try{
+    const b=db.batch();
+    Object.keys(SEED).forEach(c=>Object.keys(SEED[c]).forEach(id=>b.set(db.collection(c).doc(id),SEED[c][id])));
+    await b.commit();toast("הנתונים נטענו");
+  }catch(e){toast("הטעינה לא הצליחה. נסו שוב.")}
+}
+function listen(name,apply){
+  let first=true;
+  db.collection(name).onSnapshot(snap=>{
+    apply(snap.docs.map(d=>Object.assign({id:d.id},d.data())));
+    if(first&&!snap.metadata.fromCache){first=false;S.loaded++;if(S.loaded>=COLLECTIONS)S.stale=false}
+    render();
+  },err=>{S.stale=true;render()});
+}
+async function init(){
+  render();
+  S._d=todayS();
+  setInterval(()=>{if(S._d!==todayS()){S._d=todayS();if($("#sheet").hidden)render()}},60000);
+  if(!configured()||!window.firebase){S.dbOff=true;render();return}
+  try{
+    firebase.initializeApp(FIREBASE_CONFIG);
+    await firebase.auth().signInAnonymously();
+    db=firebase.firestore();
+  }catch(e){S.dbOff=true;S.authErr=String((e&&(e.code||e.message))||e);render();return}
+  setTimeout(()=>{if(S.loaded<COLLECTIONS){S.stale=true;render()}},10000);
+  listen("overrides",r=>{D.overrides={};r.forEach(x=>D.overrides[x.id]=x)});
+  listen("changes",r=>{D.changes=r});
+  listen("tests",r=>{D.tests=r});
+  listen("homework",r=>{D.homework=r});
+  listen("timetable",r=>{D.timetable={};r.forEach(x=>D.timetable[x.id]=x)});
+  listen("events",r=>{D.events=r});
+  listen("activities",r=>{D.activities=r});
+  listen("config",r=>{D.config=r.find(x=>x.id==="main")||{};S.cfgLoaded=true});
+  render();
+}
+init();
+</script>
+</body>
+</html>
